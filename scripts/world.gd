@@ -66,6 +66,7 @@ var winds: Array = []           # objects with wind_at(p) -> Vector2
 var heats: Array = []           # {rect, drain, lift, top}
 var refills: Array = []         # objects with refill_at(p) -> float
 var anchors: Array = []         # Vector2
+var ladders: Array = []         # Rect2 (climbing them centres Otto)
 var triggers: Array = []        # {rect, id, fn}
 var hazards: Array = []
 var buckets: Array = []
@@ -123,7 +124,7 @@ func in_sleeve(y: float) -> bool:
 func is_trunk(p: Vector2) -> bool:
 	if p.y < FORK_Y - 20.0 or p.y > PIT_BOTTOM:
 		return false
-	if absf(p.x - trunk_cx(p.y)) > trunk_hw(p.y) + 4.0:
+	if absf(p.x - trunk_cx(p.y)) > trunk_hw(p.y) + 10.0:
 		return false
 	return not in_sleeve(p.y)
 
@@ -151,6 +152,13 @@ func surface_kind(p: Vector2) -> String:
 		if r.has_point(p):
 			return "ivy"
 	return ""
+
+
+func ladder_center_x(p: Vector2) -> float:
+	for r in ladders:
+		if r.has_point(p):
+			return r.get_center().x
+	return NAN
 
 
 func water_at(p: Vector2) -> float:
@@ -1130,8 +1138,9 @@ func _build_ebene1() -> void:
 	hazards.append(amb)
 	_kastanie(Vector2(10, -128), amb)
 	# emergency ladder to the street
-	var lr := Rect2(798, -30, 56, fy + 30)
+	var lr := Rect2(788, -30, 76, fy + 30)
 	climb_rects.append(lr)
+	ladders.append(lr)
 	_painter(-23, _paint_ladder_shaft.bind(cy, fy))
 	_sign(Vector2(826, cy + 40), "NOTAUSSTIEG", 13, Color("2f8a46"), Color.WHITE, -21)
 	_painter(16, _paint_gate.bind(fy, 150.0))

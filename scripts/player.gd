@@ -280,15 +280,56 @@ func _st_cling(dt: float, ix: float, iy: float) -> void:
 	var want := Vector2(ix, iy)
 	if want.length() > 1.0:
 		want = want.normalized()
-	var v: Vector2 = want * CLIMB + env.wind * 0.14
+	var v: Vector2 = want * CLIMB
 	var p := global_position
-	if v.y != 0.0 and not world.is_climbable(p + Vector2(0, v.y * dt + signf(v.y) * 3.0)):
-		v.y = 0.0
-	var leaving: bool = v.x != 0.0 and not world.is_climbable(p + Vector2(v.x * dt + signf(v.x) * 3.0, 0))
-	if leaving and absf(iy) > 0.3:
-		# climbing diagonally: stop at the edge instead of letting go
-		v.x = 0.0
-		leaving = false
+	var leaving := false
+	if v.length_squared() > 1.0:
+		var d := v * dt
+		if not world.is_climbable(p + d + d.normalized() * 3.0):
+			# Slide along the surface (curved trunk, sloped limbs) if possible.
+			var angs: Array = [0.3, -0.3, 0.62, -0.62]
+			if absf(iy) <= 0.3:
+				angs = [0.3, -0.3, 0.62, -0.62, 0.75, -0.75]       # sideways: follow slopes
+			elif absf(ix) > 0.3:
+				angs = [0.3, -0.3, 0.62, -0.62, 0.95, -0.95, 1.25, -1.25]  # diagonal
+			var found := false
+			for ang: float in angs:
+				var d2 := d.rotated(ang)
+				if absf(iy) > 0.3 and d2.y * iy <= 0.0:
+					continue   # never turn "up" into "down" (or vice versa)
+				if world.is_climbable(p + d2 + d2.normalized() * 3.0):
+					v = d2 / dt
+					found = true
+					break
+			if not found and d.x != 0.0 and d.y != 0.0:
+				# diagonal input: try each axis on its own (gets round corners)
+				for d3: Vector2 in [Vector2(d.x, 0), Vector2(0, d.y)]:
+					if world.is_climbable(p + d3 + d3.normalized() * 3.0):
+						v = d3.normalized() * CLIMB   # keep full speed along the edge
+						found = true
+						break
+			if not found and absf(ix) <= 0.3 and absf(iy) > 0.3:
+				# pure up/down blocked: shuffle sideways if that lets us keep climbing
+				var tdir := signf(world.trunk_cx(p.y) - p.x)
+				for sx: float in [tdir, -tdir]:
+					var hp := p + Vector2(sx * 8.0, 0)
+					if world.is_climbable(hp) and world.is_climbable(hp + Vector2(0, d.y + signf(d.y) * 3.0)):
+						v = Vector2(sx * CLIMB * 0.8, 0)
+						found = true
+						break
+			if not found:
+				if absf(iy) <= 0.3 and v.x != 0.0:
+					leaving = true   # pushing sideways off the edge: let go
+				else:
+					v = Vector2.ZERO   # climbing diagonally: stop at the edge
+	var lx: float = world.ladder_center_x(p)
+	if not is_nan(lx) and absf(iy) > 0.3:
+		v.x = clampf((lx - p.x) * 8.0, -CLIMB, CLIMB)
+		if world.is_climbable(p + Vector2(0, signf(iy) * (CLIMB * dt + 3.0))):
+			v.y = signf(iy) * CLIMB
+	var drift: Vector2 = env.wind * 0.14
+	if drift != Vector2.ZERO and world.is_climbable(p + (v + drift) * dt * 2.0):
+		v += drift
 	if jump_buf > 0.0:
 		jump_buf = 0.0
 		_exit_cling()

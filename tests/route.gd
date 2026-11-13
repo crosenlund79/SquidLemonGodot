@@ -13,6 +13,103 @@ var trace := false
 var _tt := 0.0
 
 const ROUTES := {
+	"amb1b": [
+		["at", 450, 530],
+		["wait_vehicle", 560.0, 0],
+		["log", "go"],
+		["hold", 1.3, ["right"]],
+		["log", "at ladder"],
+		["hold", 4.2, ["up", "right"]],
+		["log", "end"],
+	],
+	"showcase": [
+		["intro"],
+		["hold", 1.2, ["right", "up"]],
+		["hold", 2.5, ["up"]],
+		["hold", 12.0, ["up"]],
+		["hold", 1.0, ["up"]],
+		["log", "e6 done"],
+		["at", 0, 2760],
+		["hold", 0.6, ["up"]],
+		["hold", 2.8, ["right"]],
+		["tap", "jump"],
+		["hold", 1.5, ["right"]],
+		["hold", 2.4, ["right"]],
+		["tap", "jump"],
+		["hold", 1.2, ["right"]],
+		["hold", 4.0, ["up", "right"]],
+		["hold", 2.0, ["left", "up"]],
+		["press", "grab"],
+		["hold", 0.75, ["left"]],
+		["hold", 0.3, ["up", "left"]],
+		["release", "grab"],
+		["hold", 0.3, ["up", "left"]],
+		["hold", 3.4, ["left"]],
+		["hold", 1.5, ["up"]],
+		["log", "e5 done"],
+		["at", -480, 2220],
+		["hold", 0.3, ["left"]],
+		["hold", 0.45, ["left", "jump"]],
+		["tap", "ink"],
+		["hold", 0.5, ["left"]],
+		["hold", 0.5, ["left", "jump"]],
+		["wait", 0.6],
+		["hold", 0.22, ["jump", "right", "up"]],
+		["press", "grab"],
+		["hold", 0.15, ["right", "up"]],
+		["hold", 0.85, ["right"]],
+		["hold", 0.35, ["right", "up"]],
+		["release", "grab"],
+		["hold", 0.4, ["right", "up"]],
+		["hold", 4.0, ["right", "up"]],
+		["log", "e4 done"],
+		["at", 455, 1650],
+		["wait_vehicle", 1680.0, 0],
+		["hold", 1.75, ["right"]],
+		["hold", 3.4, ["up"]],
+		["hold", 2.6, ["left"]],
+		["hold", 0.2, ["down"]],
+		["hold", 2.5, ["left"]],
+		["hold", 1.5, ["up"]],
+		["log", "e3 done"],
+		["at", -930, 1090],
+		["hold", 2.5, ["up"]],
+		["hold", 1.3, ["right"]],
+		["press", "grab"],
+		["wait", 0.1],
+		["hold", 0.65, ["right"]],
+		["hold", 0.3, ["up", "right"]],
+		["release", "grab"],
+		["hold", 0.5, ["up", "right"]],
+		["hold", 3.0, ["right"]],
+		["hold", 1.0, ["up"]],
+		["log", "e2 done"],
+		["at", 450, 530],
+		["wait_vehicle", 560.0, 0],
+		["hold", 1.3, ["right"]],
+		["hold", 4.2, ["up", "right"]],
+		["hold", 0.5, ["left", "jump"]],
+		["hold", 0.3, ["left"]],
+		["log", "street"],
+		["press", "grab"],
+		["hold", 0.35, ["up"]],
+		["hold", 0.7, ["left"]],
+		["hold", 0.3, ["up", "left"]],
+		["release", "grab"],
+		["hold", 0.4, ["up", "left"]],
+		["hold", 2.9, ["left", "up"]],
+		["hold_until_dialogue", 6.0, ["up"]],
+		["until_no_dialogue", 40.0],
+		["hold", 2.5, ["up", "right"]],
+		["log", "limb tip"],
+		["press", "grab"],
+		["hold", 0.5, ["right"]],
+		["hold", 1.0, ["up"]],
+		["release", "grab"],
+		["log", "crown done"],
+		["until_state", "credits", 70.0],
+		["wait", 4.0],
+	],
 	"e6": [
 		["at", -170, 3420],
 		["hold", 1.2, ["right", "up"]],
@@ -146,7 +243,7 @@ const ROUTES := {
 		["hold", 0.5, ["up"]],
 		["release", "up"],
 		["log", "on limb?"],
-		["hold", 4.0, ["left", "up"]],
+		["hold", 2.9, ["left", "up"]],
 		["log", "trunk?"],
 		["hold", 3.0, ["up"]],
 		["log", "end"],
@@ -208,6 +305,22 @@ func _physics_process(dt: float) -> void:
 			p.velocity.x, p.velocity.y, p.st, p.is_on_floor(), main.world.is_climbable(p.global_position)])
 
 
+func _tap(action: String) -> void:
+	await get_tree().process_frame
+	Input.action_press(action)
+	await get_tree().physics_frame
+	await get_tree().process_frame
+	Input.action_release(action)
+
+
+## Showcase only: advance dialogues like a (fast) reader would.
+func _auto_accept() -> void:
+	while true:
+		await get_tree().create_timer(1.6).timeout
+		if main.dlg.active or main.state == "intro":
+			await _tap("accept")
+
+
 func _pl() -> CharacterBody2D:
 	return main.world.player
 
@@ -222,14 +335,18 @@ func _log(label: String) -> void:
 
 func _run() -> void:
 	await get_tree().create_timer(0.5).timeout
-	main.dlg.set_process(false)
+	if route == "showcase":
+		_auto_accept()
+	else:
+		main.dlg.set_process(false)
 	for step in ROUTES[route]:
 		match step[0]:
 			"at":
 				main._dev_start(Vector2(step[1], step[2]))
-				# skip any dialogue triggered on the way
-				main.world._seen["sleeve6"] = true
-				main.world._seen["radio"] = true
+				if route != "showcase":
+					# skip any dialogue triggered on the way
+					main.world._seen["sleeve6"] = true
+					main.world._seen["radio"] = true
 				await get_tree().physics_frame
 			"hold":
 				for a in step[2]:
@@ -251,6 +368,40 @@ func _run() -> void:
 				Input.action_release(step[1])
 			"wait":
 				await get_tree().create_timer(step[1]).timeout
+			"intro":
+				await get_tree().create_timer(2.0).timeout
+				await _tap("accept")
+				while main.state != "play":
+					await get_tree().process_frame
+			"wait_vehicle":
+				for h in main.world.hazards:
+					if h.get("floor_y") == step[1]:
+						# wait for a fresh start of the requested phase
+						while h.state == step[2]:
+							await get_tree().process_frame
+						while h.state != step[2]:
+							await get_tree().process_frame
+			"hold_until_dialogue":
+				for a2 in step[2]:
+					Input.action_press(a2)
+				var t3 := 0.0
+				while not main.dlg.active and t3 < step[1]:
+					await get_tree().process_frame
+					t3 += get_process_delta_time()
+				for a2 in step[2]:
+					Input.action_release(a2)
+			"until_no_dialogue":
+				await get_tree().create_timer(0.3).timeout
+				var t2 := 0.0
+				while main.dlg.active and t2 < step[1]:
+					await get_tree().process_frame
+					t2 += get_process_delta_time()
+				await get_tree().create_timer(0.4).timeout
+			"until_state":
+				var tt := 0.0
+				while main.state != step[1] and tt < step[2]:
+					await get_tree().process_frame
+					tt += get_process_delta_time()
 			"log":
 				_log(step[1])
 			"expect_above":
@@ -267,5 +418,5 @@ func _run() -> void:
 			"shot":
 				await RenderingServer.frame_post_draw
 				get_viewport().get_texture().get_image().save_png(out_dir + "/" + step[1] + ".png")
-	print("[%s] DONE %s" % [route, "OK" if ok else "FAILED"])
+	print("[%s] DONE %s  state=%s lemon=%s kastanien=%d" % [route, "OK" if ok else "FAILED", main.state, main.world.lemon.taken, Game.kastanien.size()])
 	get_tree().quit()
