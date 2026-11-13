@@ -81,7 +81,7 @@ const ROUTES := {
 		["hold", 0.3, ["up", "right"]],
 		["release", "grab"],
 		["hold", 0.5, ["up", "right"]],
-		["hold", 3.0, ["right"]],
+		["hold_until_x", ["right"], -12.0, 6.0],
 		["hold", 1.0, ["up"]],
 		["log", "e2 done"],
 		["at", 450, 530],
@@ -100,6 +100,7 @@ const ROUTES := {
 		["hold", 2.9, ["left", "up"]],
 		["hold_until_dialogue", 6.0, ["up"]],
 		["until_no_dialogue", 40.0],
+		["wait_pigeon_clear", 80.0, -760.0],
 		["hold", 2.5, ["up", "right"]],
 		["log", "limb tip"],
 		["press", "grab"],
@@ -381,6 +382,26 @@ func _run() -> void:
 							await get_tree().process_frame
 						while h.state != step[2]:
 							await get_tree().process_frame
+			"hold_until_x":
+				# hold actions until the player has passed x (in the direction of travel)
+				for a3 in step[1]:
+					Input.action_press(a3)
+				var x0: float = _pl().global_position.x
+				var dirx := signf(step[2] - x0)
+				var t5 := 0.0
+				while (_pl().global_position.x - step[2]) * dirx < 0.0 and t5 < step[3]:
+					await get_tree().physics_frame
+					t5 += 1.0 / 60.0
+				for a3 in step[1]:
+					Input.action_release(a3)
+			"wait_pigeon_clear":
+				# wait until the pigeon patrolling this spot is heading away on the far side
+				for h in main.world.hazards:
+					if h.get("center") == Vector2(step[1], step[2]):
+						var t4 := 0.0
+						while not (h.position.x < 10.0 and h.dir < 0.0) and t4 < 10.0:
+							await get_tree().process_frame
+							t4 += get_process_delta_time()
 			"hold_until_dialogue":
 				for a2 in step[2]:
 					Input.action_press(a2)

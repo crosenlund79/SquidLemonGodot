@@ -52,6 +52,7 @@ var step_t := 0.0
 var swim_t := 0.0
 var warn_t := 0.0
 var in_water := false
+var _froze_clinging := false
 
 # grapple: 0 none, 1 shooting, 2 attached, 3 retracting, 4 whiff
 var g_state := 0
@@ -111,6 +112,9 @@ func is_clinging() -> bool:
 
 func freeze(on: bool) -> void:
 	if on:
+		if st == St.FROZEN:
+			return
+		_froze_clinging = st == St.CLING
 		if g_state != 0:
 			g_state = 3
 		if st == St.CLING:
@@ -121,6 +125,8 @@ func freeze(on: bool) -> void:
 		st = St.NORMAL
 		if world.water_at(global_position) < global_position.y:
 			st = St.SWIM
+		elif _froze_clinging and world.is_climbable(global_position):
+			_enter_cling()   # keep holding on after a dialogue
 
 
 func respawn_at(p: Vector2) -> void:
@@ -308,14 +314,20 @@ func _st_cling(dt: float, ix: float, iy: float) -> void:
 						v = d3.normalized() * CLIMB   # keep full speed along the edge
 						found = true
 						break
-			if not found and absf(ix) <= 0.3 and absf(iy) > 0.3:
-				# pure up/down blocked: shuffle sideways if that lets us keep climbing
+			if not found and absf(iy) > 0.3:
+				# up/down blocked: shuffle sideways if that lets us keep climbing
+				# (prefer the pressed side, then towards the trunk)
 				var tdir := signf(world.trunk_cx(p.y) - p.x)
-				for sx: float in [tdir, -tdir]:
-					var hp := p + Vector2(sx * 8.0, 0)
-					if world.is_climbable(hp) and world.is_climbable(hp + Vector2(0, d.y + signf(d.y) * 3.0)):
-						v = Vector2(sx * CLIMB * 0.8, 0)
-						found = true
+				var first := signf(ix) if absf(ix) > 0.3 else tdir
+				for off: float in [8.0, 16.0, 26.0]:
+					for sx: float in [first, -first]:
+						var hp := p + Vector2(sx * off, 0)
+						if world.is_climbable(hp) and world.is_climbable(p + Vector2(sx * off * 0.5, 0)) \
+								and world.is_climbable(hp + Vector2(0, d.y + signf(d.y) * 3.0)):
+							v = Vector2(sx * CLIMB * 0.8, 0)
+							found = true
+							break
+					if found:
 						break
 			if not found:
 				if absf(iy) <= 0.3 and v.x != 0.0:
@@ -327,7 +339,8 @@ func _st_cling(dt: float, ix: float, iy: float) -> void:
 		v.x = clampf((lx - p.x) * 8.0, -CLIMB, CLIMB)
 		if world.is_climbable(p + Vector2(0, signf(iy) * (CLIMB * dt + 3.0))):
 			v.y = signf(iy) * CLIMB
-	var drift: Vector2 = env.wind * 0.14
+	# Wind only pushes a moving octopus; holding still, Otto grips tight.
+	var drift: Vector2 = env.wind * 0.14 if want.length() > 0.2 else Vector2.ZERO
 	if drift != Vector2.ZERO and world.is_climbable(p + (v + drift) * dt * 2.0):
 		v += drift
 	if jump_buf > 0.0:
