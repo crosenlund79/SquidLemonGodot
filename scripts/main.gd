@@ -255,7 +255,11 @@ func _on_lemon() -> void:
 	world.fx.splash(Vector2(30, 3240), 2.2)
 	world.add_shake(0.6)
 	lem.visible = false
-	await get_tree().create_timer(1.0).timeout
+	await get_tree().create_timer(0.6).timeout
+	# look down at the squid while she eats it
+	var ct := create_tween()
+	ct.tween_method(_set_cam_target, world.cam_target, world.squid.global_position + Vector2(-60, -150), 1.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	await ct.finished
 	Audio.play("gulp", 0.0)
 	world.squid.cure()
 	world.squid.flail = 0.8
@@ -311,11 +315,12 @@ func _dev_hooks() -> void:
 			add_child(_dev_test)
 
 
-func _dev_start(p: Vector2) -> void:
+func _dev_start(p: Vector2, reset := true) -> void:
 	title.hide_title()
 	title.alpha = 0.0
 	fade_rect.color.a = 0.0
-	Game.reset_run()
+	if reset:
+		Game.reset_run()
 	world.player.visible = true
 	world.player.respawn_at(p)
 	world.camera.global_position = p

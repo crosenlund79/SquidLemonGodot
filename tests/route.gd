@@ -318,7 +318,7 @@ func _tap(action: String) -> void:
 func _auto_accept() -> void:
 	while true:
 		await get_tree().create_timer(1.6).timeout
-		if main.dlg.active or main.state == "intro":
+		if main.dlg.active:
 			await _tap("accept")
 
 
@@ -343,7 +343,7 @@ func _run() -> void:
 	for step in ROUTES[route]:
 		match step[0]:
 			"at":
-				main._dev_start(Vector2(step[1], step[2]))
+				main._dev_start(Vector2(step[1], step[2]), route != "showcase")
 				if route != "showcase":
 					# skip any dialogue triggered on the way
 					main.world._seen["sleeve6"] = true
@@ -370,7 +370,7 @@ func _run() -> void:
 			"wait":
 				await get_tree().create_timer(step[1]).timeout
 			"intro":
-				await get_tree().create_timer(2.0).timeout
+				await get_tree().create_timer(3.5).timeout
 				await _tap("accept")
 				while main.state != "play":
 					await get_tree().process_frame

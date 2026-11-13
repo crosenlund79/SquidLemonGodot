@@ -13,6 +13,11 @@ is playing a waltz. Follow the music.
 > The three required objects used: 🦑 the giant squid, 🍋 the blue lemon, 📻 the 1937 radio.
 > Setting: underground car park of a hospital in Vienna. You: an octopus. Doing: climbing a tree.
 
+| | | |
+|---|---|---|
+| ![Title](docs/title.png) | ![Swinging between sprinkler pipes on Ebene −5](docs/swing_pipes.png) | ![Lamp swing on the construction-site level](docs/swing_lamps.png) |
+| ![Boiler room with sprinkler and hot pipe](docs/boiler_room.png) | ![The 1937 radio in the crown](docs/radio.png) | ![Frau Hofrätin Kalmar, cured](docs/squid_cured.png) |
+
 ---
 
 ## How to run
@@ -115,7 +120,16 @@ the climb is still possible after you change the level:
 godot --headless --path . -- --dev-test=res://tests/route.gd --route=van4
 ```
 
-Routes: `e6 e5 grapple5 dash4 van4 car3 vent2 amb1 crown crown_lamp lemon`.
+Routes: `e6 e5 grapple5 dash4 van4 car3 vent2 amb1 crown crown_lamp lemon`. Add `--trace` to
+print Otto's state every 0.15 s.
+
+The `showcase` route plays the **whole game**, from the title to the end card. Use `--fixed-fps 30`
+to make it deterministic, and Godot's Movie Maker to record it as a video, game audio included:
+
+```bash
+godot --path . --write-movie playthrough.avi --fixed-fps 30 -- --dev-test=res://tests/route.gd --route=showcase
+```
+
 `tests/flow.gd` plays title → intro → ending, and `tests/shots.gd` takes screenshots. Both need a
 rendering driver, so don't pass `--headless`. `-- --dev-start=x,y` skips straight to playing at a position.
 

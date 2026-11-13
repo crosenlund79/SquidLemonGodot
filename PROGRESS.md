@@ -1,47 +1,40 @@
 # Progress report — Eight Arms Up
 
-_Recovery checkpoint. Branch: `claude/kind-turing-ppl19c`._
+_Branch: `claude/kind-turing-ppl19c`._
 
-## Complete
+## Status: complete and playable
 
-- **Playable game, start to finish** (Godot 4.3+; tested with 4.7.2 and 4.3):
-  title → camera pan down the light shaft → squid's intro dialogue → six car-park levels
-  (Ebene −6 … −1) → street level → tree crown → 1937 radio → blue lemon → the lemon drops
-  down the shaft → the squid is cured → her tentacle rises → end card → back to the title.
-- **Player (Otto)** in `scripts/player.gd`: walking, variable jump, swimming, climbing (bark, ivy,
-  pipes, ladders) with surface-following slides, a tentacle grapple to brass rings and lamps
-  (hold to swing, W/S reel), an ink dash, a moisture meter (dry out → respawn at the last bucket),
-  hurt/knockback, procedural IK arms, camouflage colours.
-- **Level** in `scripts/world.gd`: all geometry, the tree with metal sleeves, branches, nets,
-  checkpoints (mop buckets, plus the radio), 20 chestnuts, hazards (car, ambulance, pigeons, hot
-  vents, jet fan, wind gusts, a hot pipe), refills (drips, sprinkler, puddles, rain, squid geyser).
-- **UI**: HUD (moisture, ink, chestnuts, timer, altimeter, level banners, toasts), dialogue box,
-  title, pause menu, ending stats.
-- **Audio**: `tools/gen_audio.py` generates every sound plus the original waltz
-  (`assets/audio/*.wav`, committed along with the `.import` files, loops enabled). The music bus
-  low-pass opens up as you climb toward the radio and closes under water.
-- **Tests**: `tests/route.gd` holds scripted-input route tests. All 11 sections pass:
-  `e6 e5 grapple5 dash4 van4 car3 vent2 amb1 crown crown_lamp lemon`.
-  `tests/flow.gd` runs the full title → ending flow, and `tests/shots.gd` takes screenshots.
+- **The whole game works start to finish** on Godot 4.3 and 4.7.2: title → camera pan down the
+  light shaft → squid's intro → six car-park levels → street → crown → 1937 radio (also a
+  checkpoint) → blue lemon → lemon drop → squid cured → tentacle rises → end card → title.
+- **Player:** walk, jump, swim, climb (follows curved trunks and sloped limbs, centres on ladders),
+  tentacle swing, ink dash, moisture as health and timer, procedural arms, camouflage.
+- **Level:** sleeves force a detour through a deck on every storey. 20 chestnuts, mop-bucket
+  checkpoints, and hazards: car, ambulance, pigeons, vents, fan, gusts, hot pipe.
+- **Audio:** fully procedural (`tools/gen_audio.py`), including an original waltz through a
+  1937 radio filter that opens up as you climb.
+- **Verification:** 11 scripted route tests all pass. The `showcase` route plays the entire game
+  deterministically, and a gameplay video was recorded from it with Movie Maker.
 
-## In progress / unfinished
+## Fixed during testing
 
-- `showcase` route in `tests/route.gd`: a full scripted playthrough meant for recording a gameplay
-  video with Godot's Movie Maker (`--write-movie`). It reaches the radio. Still to finish: the
-  tail after the radio dialogue (right limb → swing → lemon → ending), then recording and
-  converting to MP4 with ffmpeg.
-- Possible polish: more playtesting of difficulty and moisture balance by a human, tuning the
-  sound mix, and an optional export preset.
+- Otto fell off after dialogues while clinging. Clinging is now restored after a dialogue.
+- Ivy didn't reach the floor, and a hook sat flush with the ceiling (failed line-of-sight).
+- Keyboard aim was overridden for 4 s at startup by a phantom "mouse".
+- Stalls at limb/trunk junctions and curved trunk edges were fixed with surface sliding and a
+  sideways nudge.
+
+## Possible next steps (optional polish)
+
+- Human playtesting for difficulty and moisture balance; mixing levels by ear (the audio has only
+  been checked via spectrograms).
+- Export presets (Windows/Linux/Web) and a few more secrets or chestnut spots.
 
 ## How to resume
 
-1. Open the project in Godot 4.3+ (or run `godot --headless --path . --import` once).
-2. Run the route tests:
-   ```bash
-   godot --headless --path . -- --dev-test=res://tests/route.gd --route=lemon
-   ```
-3. Debug a route with per-0.15 s traces by adding `--trace`.
-4. For the showcase: `--route=showcase`, then record with
-   `godot --path . --write-movie out.avi --fixed-fps 30 -- --dev-test=res://tests/route.gd --route=showcase`
-   (needs a display, or `xvfb-run` plus `--rendering-driver opengl3`).
-5. Regenerate the audio: `python3 tools/gen_audio.py` (needs numpy), then re-import.
+1. Open in Godot 4.3+ (or run `godot --headless --path . --import`).
+2. Run a route test: `godot --headless --path . -- --dev-test=res://tests/route.gd --route=lemon`
+   (add `--trace` to debug).
+3. Full playthrough: add `--fixed-fps 30` with `--route=showcase`, and add `--write-movie out.avi`
+   to record it (needs a display or `xvfb-run` plus `--rendering-driver opengl3`).
+4. Regenerate the audio with `python3 tools/gen_audio.py` (numpy), then re-import.
